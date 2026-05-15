@@ -451,12 +451,26 @@ def test_discover_channels(tmp_path, fixture_dir):
     assert slugs == ["alpha", "beta"]
 
 def test_unknown_keys_warn_not_fail(fixture_dir, tmp_path, caplog):
+    import logging
     src = (fixture_dir / "channel_minimal.yaml").read_text()
     src += "\nextra_unknown_field: yes\n"
     p = tmp_path / "extra.yaml"
     p.write_text(src)
-    cfg = load_channel(p)
+    with caplog.at_level(logging.WARNING, logger="tools.channel_config"):
+        cfg = load_channel(p)
     assert cfg.slug == "minimal"
+    assert any("extra_unknown_field" in r.message for r in caplog.records)
+
+
+def test_permission_error_wrapped_as_config_error(tmp_path):
+    src = tmp_path / "unreadable.yaml"
+    src.write_text("slug: x")
+    src.chmod(0o000)
+    try:
+        with pytest.raises(ChannelConfigError):
+            load_channel(src)
+    finally:
+        src.chmod(0o644)  # restore so tmp_path cleanup works
 ```
 
 - [ ] **Step 5: Create fixture YAMLs**
@@ -629,7 +643,7 @@ def load_channel(path: str | Path) -> ChannelConfig:
     p = Path(path)
     try:
         raw = yaml.safe_load(p.read_text())
-    except (FileNotFoundError, yaml.YAMLError) as e:
+    except (OSError, yaml.YAMLError) as e:
         raise ChannelConfigError(f"could not read {p}: {e}") from e
     if not isinstance(raw, dict):
         raise ChannelConfigError(f"{p} did not parse to a dict")
@@ -1152,9 +1166,10 @@ import edge_tts
 DEFAULT_VOICE = "en-US-GuyNeural"
 
 
-async def _synthesize_async(text: str, voice: str, output_path: str, rate: str) -> None:
+async def _synthesize_async(text: str, voice: str, output_path: str, rate: str,
+                            timeout: float) -> None:
     communicate = edge_tts.Communicate(text=text, voice=voice, rate=rate)
-    await communicate.save(output_path)
+    await asyncio.wait_for(communicate.save(output_path), timeout=timeout)
 
 
 def _speed_to_rate(speed: float) -> str:
@@ -1164,13 +1179,16 @@ def _speed_to_rate(speed: float) -> str:
 
 
 def synthesize(text: str, output_path: str, voice: str = DEFAULT_VOICE,
-               speed: float = 1.0) -> str:
-    """Synthesize `text` to an MP3 at `output_path`. Returns the path."""
+               speed: float = 1.0, timeout: float = 60.0) -> str:
+    """Synthesize `text` to an MP3 at `output_path`. Returns the path.
+
+    Raises asyncio.TimeoutError if synthesis takes longer than `timeout` seconds.
+    """
     if not text or not text.strip():
         raise ValueError("text must not be empty")
     rate = _speed_to_rate(speed)
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    asyncio.run(_synthesize_async(text, voice, output_path, rate))
+    asyncio.run(_synthesize_async(text, voice, output_path, rate, timeout))
     return output_path
 
 
@@ -1198,7 +1216,9 @@ def test_real_synthesis_produces_valid_mp3(tmp_path):
     assert out.stat().st_size > 1000  # ~1KB minimum for a short MP3
     # MP3 magic bytes: ID3 or 0xFF 0xFB
     head = out.read_bytes()[:4]
-    assert head.startswith(b"ID3") or head[:2] == b"\xff\xfb"
+    # Accept ID3v2 tag or any MPEG audio frame sync (11-bit pattern 0xFFE).
+    is_mpeg_frame = head[0] == 0xFF and (head[1] & 0xE0) == 0xE0
+    assert head.startswith(b"ID3") or is_mpeg_frame
 ```
 
 - [ ] **Step 6: Run the slow test once locally to verify real synthesis works**

@@ -93,7 +93,7 @@ def load_channel(path: str | Path) -> ChannelConfig:
     p = Path(path)
     try:
         raw = yaml.safe_load(p.read_text())
-    except (FileNotFoundError, yaml.YAMLError) as e:
+    except (OSError, yaml.YAMLError) as e:
         raise ChannelConfigError(f"could not read {p}: {e}") from e
     if not isinstance(raw, dict):
         raise ChannelConfigError(f"{p} did not parse to a dict")

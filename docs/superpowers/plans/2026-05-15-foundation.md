@@ -451,12 +451,26 @@ def test_discover_channels(tmp_path, fixture_dir):
     assert slugs == ["alpha", "beta"]
 
 def test_unknown_keys_warn_not_fail(fixture_dir, tmp_path, caplog):
+    import logging
     src = (fixture_dir / "channel_minimal.yaml").read_text()
     src += "\nextra_unknown_field: yes\n"
     p = tmp_path / "extra.yaml"
     p.write_text(src)
-    cfg = load_channel(p)
+    with caplog.at_level(logging.WARNING, logger="tools.channel_config"):
+        cfg = load_channel(p)
     assert cfg.slug == "minimal"
+    assert any("extra_unknown_field" in r.message for r in caplog.records)
+
+
+def test_permission_error_wrapped_as_config_error(tmp_path):
+    src = tmp_path / "unreadable.yaml"
+    src.write_text("slug: x")
+    src.chmod(0o000)
+    try:
+        with pytest.raises(ChannelConfigError):
+            load_channel(src)
+    finally:
+        src.chmod(0o644)  # restore so tmp_path cleanup works
 ```
 
 - [ ] **Step 5: Create fixture YAMLs**
@@ -629,7 +643,7 @@ def load_channel(path: str | Path) -> ChannelConfig:
     p = Path(path)
     try:
         raw = yaml.safe_load(p.read_text())
-    except (FileNotFoundError, yaml.YAMLError) as e:
+    except (OSError, yaml.YAMLError) as e:
         raise ChannelConfigError(f"could not read {p}: {e}") from e
     if not isinstance(raw, dict):
         raise ChannelConfigError(f"{p} did not parse to a dict")

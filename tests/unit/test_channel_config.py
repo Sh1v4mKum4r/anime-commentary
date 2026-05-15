@@ -1,5 +1,5 @@
+import logging
 import pytest
-from pathlib import Path
 from tools.channel_config import (
     load_channel,
     discover_channels,
@@ -41,5 +41,18 @@ def test_unknown_keys_warn_not_fail(fixture_dir, tmp_path, caplog):
     src += "\nextra_unknown_field: yes\n"
     p = tmp_path / "extra.yaml"
     p.write_text(src)
-    cfg = load_channel(p)
+    with caplog.at_level(logging.WARNING, logger="tools.channel_config"):
+        cfg = load_channel(p)
     assert cfg.slug == "minimal"
+    assert any("extra_unknown_field" in r.message for r in caplog.records)
+
+
+def test_permission_error_wrapped_as_config_error(tmp_path):
+    src = tmp_path / "unreadable.yaml"
+    src.write_text("slug: x")
+    src.chmod(0o000)
+    try:
+        with pytest.raises(ChannelConfigError):
+            load_channel(src)
+    finally:
+        src.chmod(0o644)  # restore so tmp_path cleanup works

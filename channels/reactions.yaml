@@ -1,0 +1,47 @@
+slug: reactions
+display_name: "Anime Reactions"
+
+anime:
+  mode: auto
+  top_n: 8
+  curated_ids: []
+  exclude_genres: [Hentai, Ecchi]
+
+persona:
+  voice: "excited fan who's been watching since 2018"
+  style: "energetic but informed, no clickbait, no fake reactions"
+  hot_takes: true
+  spoiler_policy: warn
+
+tts:
+  provider: edge-tts
+  voice_id: en-US-GuyNeural
+  speed: 1.05
+
+output_mix:
+  overview_per_episode: 1
+  moments_per_episode: 2
+  max_total_per_day: 12
+
+schedule:
+  publish_times_utc: ["02:00", "08:00", "14:00", "20:00"]
+  immediate_publish: false
+
+platforms:
+  youtube:
+    enabled: true
+    auth_secret: YT_REFRESH_TOKEN_REACTIONS
+    default_action: review_queued
+    auto_publish_if_all_pass:
+      - hook_score >= 7
+      - coherence_score >= 7
+      - sensitive_flag == clean
+    title_template: "{anime} EP{ep} — {hook_summary}"
+    description_template: |
+      Quick take on {anime} episode {ep}.
+      #anime #shorts #{anime_slug}
+    tags: [anime, shorts, reaction]
+    privacy: public
+
+  tiktok:
+    enabled: false

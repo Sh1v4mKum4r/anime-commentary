@@ -59,3 +59,10 @@ def test_chat_wraps_bad_json_in_claude_error():
     with patch("tools.llm_client.subprocess.run", return_value=_ok_completed("not-json")):
         with pytest.raises(ClaudeError, match="could not parse"):
             llm_client.chat("p")
+
+
+def test_chat_raises_when_result_field_missing():
+    payload = json.dumps({"duration_ms": 42, "error": "oops"})
+    with patch("tools.llm_client.subprocess.run", return_value=_ok_completed(payload)):
+        with pytest.raises(ClaudeError, match="missing 'result'"):
+            llm_client.chat("p")

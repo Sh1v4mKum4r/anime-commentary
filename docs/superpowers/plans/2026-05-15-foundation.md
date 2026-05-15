@@ -1212,7 +1212,9 @@ def test_real_synthesis_produces_valid_mp3(tmp_path):
     assert out.stat().st_size > 1000  # ~1KB minimum for a short MP3
     # MP3 magic bytes: ID3 or 0xFF 0xFB
     head = out.read_bytes()[:4]
-    assert head.startswith(b"ID3") or head[:2] == b"\xff\xfb"
+    # Accept ID3v2 tag or any MPEG audio frame sync (11-bit pattern 0xFFE).
+    is_mpeg_frame = head[0] == 0xFF and (head[1] & 0xE0) == 0xE0
+    assert head.startswith(b"ID3") or is_mpeg_frame
 ```
 
 - [ ] **Step 6: Run the slow test once locally to verify real synthesis works**

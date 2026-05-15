@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS episodes (
 
 CREATE TABLE IF NOT EXISTS shorts (
   id            BIGSERIAL PRIMARY KEY,
-  episode_id    BIGINT REFERENCES episodes(id) ON DELETE CASCADE,
+  episode_id    BIGINT NOT NULL REFERENCES episodes(id) ON DELETE CASCADE,
   channel_slug  TEXT NOT NULL,
   kind          TEXT NOT NULL,
   moment_idx    INT,
@@ -48,13 +48,13 @@ CREATE TABLE IF NOT EXISTS jobs (
 
 CREATE TABLE IF NOT EXISTS metrics (
   id            BIGSERIAL PRIMARY KEY,
-  short_id      BIGINT REFERENCES shorts(id) ON DELETE CASCADE,
+  short_id      BIGINT NOT NULL REFERENCES shorts(id) ON DELETE CASCADE,
   polled_at     TIMESTAMPTZ DEFAULT NOW(),
   views         INT,
   likes         INT,
   retention_pct NUMERIC
 );
 
-CREATE INDEX IF NOT EXISTS shorts_status_idx ON shorts (status);
+CREATE INDEX IF NOT EXISTS shorts_status_created_idx ON shorts (status, created_at);
 CREATE INDEX IF NOT EXISTS shorts_channel_platform_idx ON shorts (channel_slug, platform);
 CREATE INDEX IF NOT EXISTS episodes_status_idx ON episodes (status);

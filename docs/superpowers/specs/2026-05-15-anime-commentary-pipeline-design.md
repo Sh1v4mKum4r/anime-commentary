@@ -304,7 +304,7 @@ CREATE TABLE episodes (
 
 CREATE TABLE shorts (
   id            BIGSERIAL PRIMARY KEY,
-  episode_id    BIGINT REFERENCES episodes(id) ON DELETE CASCADE,
+  episode_id    BIGINT NOT NULL REFERENCES episodes(id) ON DELETE CASCADE,
   channel_slug  TEXT NOT NULL,                 -- maps to channels/<slug>.yaml
   kind          TEXT NOT NULL,                 -- 'overview' | 'moment'
   moment_idx    INT,                           -- NULL for overview
@@ -333,14 +333,14 @@ CREATE TABLE jobs (
 
 CREATE TABLE metrics (
   id            BIGSERIAL PRIMARY KEY,
-  short_id      BIGINT REFERENCES shorts(id) ON DELETE CASCADE,
+  short_id      BIGINT NOT NULL REFERENCES shorts(id) ON DELETE CASCADE,
   polled_at     TIMESTAMPTZ DEFAULT NOW(),
   views         INT,
   likes         INT,
   retention_pct NUMERIC
 );
 
-CREATE INDEX ON shorts (status);
+CREATE INDEX ON shorts (status, created_at);  -- composite supports FIFO queue queries
 CREATE INDEX ON shorts (channel_slug, platform);
 CREATE INDEX ON episodes (status);
 ```

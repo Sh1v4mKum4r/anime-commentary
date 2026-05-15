@@ -45,6 +45,26 @@ def test_default_voice_constant():
     assert tts_client.DEFAULT_VOICE == "en-US-GuyNeural"
 
 
+@pytest.mark.parametrize("speed,expected", [
+    (1.0, "+0%"),
+    (1.05, "+5%"),
+    (0.95, "-5%"),
+    (0.90, "-10%"),
+    (2.0, "+100%"),
+])
+def test_speed_to_rate(speed, expected):
+    assert tts_client._speed_to_rate(speed) == expected
+
+
+def test_synthesize_passes_timeout_to_wait_for(tmp_path):
+    fake_comm = MagicMock()
+    fake_comm.save = AsyncMock()
+    with patch("tools.tts_client.edge_tts.Communicate", return_value=fake_comm), \
+         patch("tools.tts_client.asyncio.wait_for", new=AsyncMock()) as wait_for:
+        tts_client.synthesize("hi", str(tmp_path / "o.mp3"), timeout=5.0)
+    assert wait_for.call_args.kwargs["timeout"] == 5.0
+
+
 @pytest.mark.slow
 def test_real_synthesis_produces_valid_mp3(tmp_path):
     """Hits real edge-tts; needs network. Skipped in fast CI."""

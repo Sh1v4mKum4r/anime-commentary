@@ -1166,9 +1166,10 @@ import edge_tts
 DEFAULT_VOICE = "en-US-GuyNeural"
 
 
-async def _synthesize_async(text: str, voice: str, output_path: str, rate: str) -> None:
+async def _synthesize_async(text: str, voice: str, output_path: str, rate: str,
+                            timeout: float) -> None:
     communicate = edge_tts.Communicate(text=text, voice=voice, rate=rate)
-    await communicate.save(output_path)
+    await asyncio.wait_for(communicate.save(output_path), timeout=timeout)
 
 
 def _speed_to_rate(speed: float) -> str:
@@ -1178,13 +1179,16 @@ def _speed_to_rate(speed: float) -> str:
 
 
 def synthesize(text: str, output_path: str, voice: str = DEFAULT_VOICE,
-               speed: float = 1.0) -> str:
-    """Synthesize `text` to an MP3 at `output_path`. Returns the path."""
+               speed: float = 1.0, timeout: float = 60.0) -> str:
+    """Synthesize `text` to an MP3 at `output_path`. Returns the path.
+
+    Raises asyncio.TimeoutError if synthesis takes longer than `timeout` seconds.
+    """
     if not text or not text.strip():
         raise ValueError("text must not be empty")
     rate = _speed_to_rate(speed)
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    asyncio.run(_synthesize_async(text, voice, output_path, rate))
+    asyncio.run(_synthesize_async(text, voice, output_path, rate, timeout))
     return output_path
 
 

@@ -1,0 +1,38 @@
+slug: minimal
+display_name: "Minimal Channel"
+
+anime:
+  mode: auto
+  top_n: 8
+  exclude_genres: []
+
+persona:
+  voice: "neutral commentator"
+  style: "informative"
+  hot_takes: false
+
+tts:
+  provider: edge-tts
+  voice_id: en-US-GuyNeural
+  speed: 1.0
+
+output_mix:
+  overview_per_episode: 1
+  moments_per_episode: 2
+  max_total_per_day: 10
+
+schedule:
+  publish_times_utc: ["08:00"]
+  immediate_publish: false
+
+platforms:
+  youtube:
+    enabled: true
+    auth_secret: YT_REFRESH_TOKEN_MINIMAL
+    default_action: review_queued
+    auto_publish_if_all_pass:
+      - hook_score >= 7
+    title_template: "{anime} EP{ep}"
+    description_template: "Short on {anime}"
+    tags: [anime]
+    privacy: public

@@ -1,0 +1,17 @@
+slug: missing_platforms
+display_name: "Missing platforms"
+anime:
+  mode: auto
+  top_n: 8
+persona:
+  voice: "x"
+  style: "y"
+tts:
+  provider: edge-tts
+  voice_id: en-US-GuyNeural
+output_mix:
+  overview_per_episode: 1
+  moments_per_episode: 2
+schedule:
+  publish_times_utc: ["08:00"]
+# platforms intentionally omitted to trigger validation error
